@@ -1,5 +1,5 @@
 /*
- *    Copyright 2009-2023 the original author or authors.
+ *    Copyright 2009-2024 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -58,20 +58,27 @@ public class MapperRegistry {
   }
 
   public <T> void addMapper(Class<T> type) {
+    // <1> 判断，必须是接口。
     if (type.isInterface()) {
+      // <2> 已经添加过，则抛出 BindingException 异常
       if (hasMapper(type)) {
         throw new BindingException("Type " + type + " is already known to the MapperRegistry.");
       }
       boolean loadCompleted = false;
       try {
+        // <3> 将Mapper接口对应的代理工厂添加到 knownMappers 中
         knownMappers.put(type, new MapperProxyFactory<>(type));
         // It's important that the type is added before the parser is run
         // otherwise the binding may automatically be attempted by the
         // mapper parser. If the type is already known, it won't try.
+        // <4> 解析 Mapper 的注解配置
         MapperAnnotationBuilder parser = new MapperAnnotationBuilder(config, type);
+        // 解析 Mapper 接口上面的注解和 Mapper 接口对应的 XML 文件
         parser.parse();
+        // <5> 标记加载完成
         loadCompleted = true;
       } finally {
+        // <6> 若加载未完成，从 knownMappers 中移除
         if (!loadCompleted) {
           knownMappers.remove(type);
         }
@@ -101,9 +108,11 @@ public class MapperRegistry {
    * @since 3.2.2
    */
   public void addMappers(String packageName, Class<?> superType) {
+    // <1> 通过ResolverUtil扫描宝下指定的嘞
     ResolverUtil<Class<?>> resolverUtil = new ResolverUtil<>();
     resolverUtil.find(new ResolverUtil.IsA(superType), packageName);
     Set<Class<? extends Class<?>>> mapperSet = resolverUtil.getClasses();
+    // <2> 遍历，添加到 knownMappers 本地缓存中
     for (Class<?> mapperClass : mapperSet) {
       addMapper(mapperClass);
     }

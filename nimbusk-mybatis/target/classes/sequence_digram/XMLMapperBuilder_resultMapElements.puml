@@ -1,0 +1,106 @@
+@startuml
+participant Actor
+Actor -> XMLMapperBuilder : resultMapElements
+activate XMLMapperBuilder
+loop list
+XMLMapperBuilder -> XMLMapperBuilder : resultMapElement
+activate XMLMapperBuilder
+XMLMapperBuilder -> XMLMapperBuilder : resultMapElement
+activate XMLMapperBuilder
+alt typeClass == null
+XMLMapperBuilder -> XMLMapperBuilder : inheritEnclosingType
+activate XMLMapperBuilder
+alt "association".equals(resultMapNode.getName()) && resultMapNode.getStringAttribute("resultMap") == null
+alt property != null && enclosingType != null
+note right of XMLMapperBuilder : Empty
+end
+else 
+alt "case".equals(resultMapNode.getName()) && resultMapNode.getStringAttribute("resultMap") == null
+note right of XMLMapperBuilder : Empty
+end
+note right of XMLMapperBuilder : Empty
+end
+XMLMapperBuilder --> XMLMapperBuilder
+deactivate XMLMapperBuilder
+end
+loop resultChildren
+alt "constructor".equals(resultChild.getName())
+XMLMapperBuilder -> XMLMapperBuilder : processConstructorElement
+activate XMLMapperBuilder
+loop argChildren
+alt "idArg".equals(argChild.getName())
+note right of XMLMapperBuilder : Empty
+end
+XMLMapperBuilder -> XMLMapperBuilder : buildResultMappingFromContext
+activate XMLMapperBuilder
+XMLMapperBuilder --> XMLMapperBuilder
+deactivate XMLMapperBuilder
+end
+XMLMapperBuilder --> XMLMapperBuilder
+deactivate XMLMapperBuilder
+else 
+alt "discriminator".equals(resultChild.getName())
+XMLMapperBuilder -> XMLMapperBuilder : processDiscriminatorElement
+activate XMLMapperBuilder
+loop context.getChildren()
+XMLMapperBuilder -> XMLMapperBuilder : processNestedResultMappings
+activate XMLMapperBuilder
+XMLMapperBuilder --> XMLMapperBuilder
+deactivate XMLMapperBuilder
+end
+XMLMapperBuilder -> MapperBuilderAssistant : buildDiscriminator
+activate MapperBuilderAssistant
+MapperBuilderAssistant --> XMLMapperBuilder
+deactivate MapperBuilderAssistant
+XMLMapperBuilder --> XMLMapperBuilder
+deactivate XMLMapperBuilder
+else 
+alt "id".equals(resultChild.getName())
+note right of XMLMapperBuilder : Empty
+end
+XMLMapperBuilder -> XMLMapperBuilder : buildResultMappingFromContext
+activate XMLMapperBuilder
+alt flags.contains(ResultFlag.CONSTRUCTOR)
+else 
+XMLMapperBuilder -> XMLMapperBuilder : () ->
+activate XMLMapperBuilder
+XMLMapperBuilder --> XMLMapperBuilder
+deactivate XMLMapperBuilder
+end
+alt configuration.isLazyLoadingEnabled()
+else 
+note right of XMLMapperBuilder : Empty
+end
+XMLMapperBuilder -> MapperBuilderAssistant : buildResultMapping
+activate MapperBuilderAssistant
+MapperBuilderAssistant --> XMLMapperBuilder
+deactivate MapperBuilderAssistant
+XMLMapperBuilder --> XMLMapperBuilder
+deactivate XMLMapperBuilder
+end
+end
+end
+create ResultMapResolver
+XMLMapperBuilder -> ResultMapResolver : new
+activate ResultMapResolver
+ResultMapResolver --> XMLMapperBuilder
+deactivate ResultMapResolver
+XMLMapperBuilder -> ResultMapResolver : resolve
+activate ResultMapResolver
+ResultMapResolver -> MapperBuilderAssistant : addResultMap
+activate MapperBuilderAssistant
+MapperBuilderAssistant --> ResultMapResolver
+deactivate MapperBuilderAssistant
+ResultMapResolver --> XMLMapperBuilder
+deactivate ResultMapResolver
+XMLMapperBuilder -> Configuration : addIncompleteResultMap
+activate Configuration
+Configuration --> XMLMapperBuilder
+deactivate Configuration
+XMLMapperBuilder --> XMLMapperBuilder
+deactivate XMLMapperBuilder
+XMLMapperBuilder --> XMLMapperBuilder
+deactivate XMLMapperBuilder
+end
+return
+@enduml

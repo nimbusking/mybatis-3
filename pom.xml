@@ -29,8 +29,9 @@
   <groupId>org.mybatis</groupId>
   <artifactId>mybatis</artifactId>
   <version>3.5.17-SNAPSHOT</version>
+    <packaging>pom</packaging>
 
-  <name>mybatis</name>
+    <name>mybatis</name>
   <description>The MyBatis SQL mapper framework makes it easier to use a relational database with object-oriented
     applications. MyBatis couples objects with stored procedures or SQL statements using a XML descriptor or
     annotations. Simplicity is the biggest advantage of the MyBatis data mapper over object relational mapping
@@ -105,8 +106,11 @@
       <email>neuberg@m-atelier.cz</email>
     </contributor>
   </contributors>
+    <modules>
+        <module>nimbusk-mybatis</module>
+    </modules>
 
-  <scm>
+    <scm>
     <connection>scm:git:ssh://git@github.com/mybatis/mybatis-3.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/mybatis/mybatis-3.git</developerConnection>
     <tag>HEAD</tag>

@@ -94,13 +94,20 @@ public class XMLMapperBuilder extends BaseBuilder {
   }
 
   public void parse() {
+    // <1> 判断当前 Mapper 是否已经加载过
     if (!configuration.isResourceLoaded(resource)) {
+      // <2> 解析 `<mapper />` 节点
       configurationElement(parser.evalNode("/mapper"));
+      // <3> 标记该 Mapper 已经加载过
       configuration.addLoadedResource(resource);
+      // <4> 绑定 Mapper
       bindMapperForNamespace();
     }
+    // <5> 解析待定的 <resultMap /> 节点
     configuration.parsePendingResultMaps(false);
+    // <6> 解析待定的 <cache-ref /> 节点
     configuration.parsePendingCacheRefs(false);
+    // <7> 解析待定的 SQL 语句的节点
     configuration.parsePendingStatements(false);
   }
 
@@ -110,16 +117,23 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   private void configurationElement(XNode context) {
     try {
+      // <1> 获得 namespace 属性
       String namespace = context.getStringAttribute("namespace");
       if (namespace == null || namespace.isEmpty()) {
         throw new BuilderException("Mapper's namespace cannot be empty");
       }
       builderAssistant.setCurrentNamespace(namespace);
+      // <2> 解析 <cache-ref /> 节点
       cacheRefElement(context.evalNode("cache-ref"));
+      // <3> 解析 <cache /> 节点
       cacheElement(context.evalNode("cache"));
+      // 已废弃！老式风格的参数映射。内联参数是首选,这个元素可能在将来被移除，这里不会记录。
       parameterMapElement(context.evalNodes("/mapper/parameterMap"));
+      // <4> 解析 <resultMap /> 节点
       resultMapElements(context.evalNodes("/mapper/resultMap"));
+      // <5> 解析 <sql /> 节点们
       sqlElement(context.evalNodes("/mapper/sql"));
+      // <6> 解析 <select /> <insert /> <update /> <delete /> 节点
       buildStatementFromContext(context.evalNodes("select|insert|update|delete"));
     } catch (Exception e) {
       throw new BuilderException("Error parsing Mapper XML. The XML location is '" + resource + "'. Cause: " + e, e);
@@ -216,35 +230,50 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   private ResultMap resultMapElement(XNode resultMapNode, List<ResultMapping> additionalResultMappings,
       Class<?> enclosingType) {
+    // 获取当前线程的上下文
     ErrorContext.instance().activity("processing " + resultMapNode.getValueBasedIdentifier());
+    // <1> 获得 type 属性
     String type = resultMapNode.getStringAttribute("type", resultMapNode.getStringAttribute("ofType",
         resultMapNode.getStringAttribute("resultType", resultMapNode.getStringAttribute("javaType"))));
+    // 获得 type 对应的类
     Class<?> typeClass = resolveClass(type);
     if (typeClass == null) {
+      // 从 enclosingType Class 对象获取该 property 属性的 Class 对象
       typeClass = inheritEnclosingType(resultMapNode, enclosingType);
     }
     Discriminator discriminator = null;
+    // 创建 ResultMapping 集合
     List<ResultMapping> resultMappings = new ArrayList<>(additionalResultMappings);
+    // 添加父 ResultMap 的 ResultMapping 集合
     List<XNode> resultChildren = resultMapNode.getChildren();
+    // <2> 遍历 <resultMap /> 的子节点
     for (XNode resultChild : resultChildren) {
-      if ("constructor".equals(resultChild.getName())) {
+      if ("constructor".equals(resultChild.getName())) { // <2.1> 处理 <constructor /> 节点
         processConstructorElement(resultChild, typeClass, resultMappings);
-      } else if ("discriminator".equals(resultChild.getName())) {
+      } else if ("discriminator".equals(resultChild.getName())) { // <2.2> 处理 <discriminator /> 节点
         discriminator = processDiscriminatorElement(resultChild, typeClass, resultMappings);
       } else {
+        // <2.3> 处理其它节点
         List<ResultFlag> flags = new ArrayList<>();
         if ("id".equals(resultChild.getName())) {
+          // 为添加该 ResultMapping 添加一个 Id 标志
           flags.add(ResultFlag.ID);
         }
+        // 生成对应的 ResultMapping 对象
         resultMappings.add(buildResultMappingFromContext(resultChild, typeClass, flags));
       }
     }
+    // 获得 id 属性，没有的话自动生成
     String id = resultMapNode.getStringAttribute("id", resultMapNode.getValueBasedIdentifier());
+    // 获得 extends 属性
     String extend = resultMapNode.getStringAttribute("extends");
+    // 获得 autoMapping 属性
     Boolean autoMapping = resultMapNode.getBooleanAttribute("autoMapping");
+    // <3> 创建 ResultMapResolver 对象，执行解析
     ResultMapResolver resultMapResolver = new ResultMapResolver(builderAssistant, id, typeClass, extend, discriminator,
         resultMappings, autoMapping);
     try {
+      // 处理 ResultMap 并添加到 Configuration 全局配置中
       return resultMapResolver.resolve();
     } catch (IncompleteElementException e) {
       configuration.addIncompleteResultMap(resultMapResolver);

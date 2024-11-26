@@ -114,20 +114,26 @@ public class MapperAnnotationBuilder {
   public void parse() {
     String resource = type.toString();
     if (!configuration.isResourceLoaded(resource)) {
+      // 加载该接口对应的 XML 文件
       loadXmlResource();
       configuration.addLoadedResource(resource);
       assistant.setCurrentNamespace(type.getName());
+      // 解析 Mapper 接口的 @CacheNamespace 注解，创建缓存
       parseCache();
+      // 解析 Mapper 接口的 @CacheNamespaceRef 注解，引用其他命名空间
       parseCacheRef();
       for (Method method : type.getMethods()) {
+        // 先判断前置条件：不是桥接方法（泛型擦除时虚拟机生成的）且不是default方法
         if (!canHaveStatement(method)) {
           continue;
         }
+        // 处理ResultMap
         if (getAnnotationWrapper(method, false, Select.class, SelectProvider.class).isPresent()
             && method.getAnnotation(ResultMap.class) == null) {
           parseResultMap(method);
         }
         try {
+          // 解析方法上面的注解
           parseStatement(method);
         } catch (IncompleteElementException e) {
           configuration.addIncompleteMethod(new MethodResolver(this, method));
@@ -146,6 +152,7 @@ public class MapperAnnotationBuilder {
     // Spring may not know the real resource name so we check a flag
     // to prevent loading again a resource twice
     // this flag is set at XMLMapperBuilder#bindMapperForNamespace
+    // 检查一下类型放置有问题
     if (!configuration.isResourceLoaded("namespace:" + type.getName())) {
       String xmlResource = type.getName().replace('.', '/') + ".xml";
       // #1347
@@ -159,8 +166,10 @@ public class MapperAnnotationBuilder {
         }
       }
       if (inputStream != null) {
+        // 创建 XMLMapperBuilder 对象
         XMLMapperBuilder xmlParser = new XMLMapperBuilder(inputStream, assistant.getConfiguration(), xmlResource,
             configuration.getSqlFragments(), type.getName());
+        // 解析该 XML 文件
         xmlParser.parse();
       }
     }

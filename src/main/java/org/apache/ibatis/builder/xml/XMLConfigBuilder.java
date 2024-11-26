@@ -107,6 +107,7 @@ public class XMLConfigBuilder extends BaseBuilder {
       throw new BuilderException("Each XMLConfigBuilder can only be used once.");
     }
     parsed = true;
+    // 通过xpath查询解析configuration结点
     parseConfiguration(parser.evalNode("/configuration"));
     return configuration;
   }
@@ -114,6 +115,7 @@ public class XMLConfigBuilder extends BaseBuilder {
   private void parseConfiguration(XNode root) {
     try {
       // issue #117 read properties first
+      // 解析若干标签，最终初始化到Configuration类中
       propertiesElement(root.evalNode("properties"));
       Properties settings = settingsAsProperties(root.evalNode("settings"));
       loadCustomVfsImpl(settings);
@@ -389,30 +391,46 @@ public class XMLConfigBuilder extends BaseBuilder {
     if (context == null) {
       return;
     }
+    // <0> 遍历子节点
     for (XNode child : context.getChildren()) {
+      // <1> 如果是 package 标签，则扫描该包
       if ("package".equals(child.getName())) {
+        // 获得包名
         String mapperPackage = child.getStringAttribute("name");
+        // 添加到 configuration 中
         configuration.addMappers(mapperPackage);
-      } else {
+      } else { // 如果是 mapper 标签
+        // 获得 resource、url、class 属性
         String resource = child.getStringAttribute("resource");
         String url = child.getStringAttribute("url");
         String mapperClass = child.getStringAttribute("class");
+        // <2> 使用相对于类路径的资源引用
         if (resource != null && url == null && mapperClass == null) {
           ErrorContext.instance().resource(resource);
+          // 获得 resource 的 InputStream 对象
           try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
+            // 创建 XMLMapperBuilder 对象
             XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, configuration, resource,
                 configuration.getSqlFragments());
+            // 执行解析
             mapperParser.parse();
           }
+          // <3> 使用完全限定资源定位符（URL）
         } else if (resource == null && url != null && mapperClass == null) {
           ErrorContext.instance().resource(url);
+          // 获得 url 的 InputStream 对象
           try (InputStream inputStream = Resources.getUrlAsStream(url)) {
+            // 创建 XMLMapperBuilder 对象
             XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, configuration, url,
                 configuration.getSqlFragments());
+            // 执行解析
             mapperParser.parse();
           }
+          // <4> 使用映射器接口实现类的完全限定类名
         } else if (resource == null && url == null && mapperClass != null) {
+          // 获得 Mapper 接口
           Class<?> mapperInterface = Resources.classForName(mapperClass);
+          // 添加到 configuration 中
           configuration.addMapper(mapperInterface);
         } else {
           throw new BuilderException(
